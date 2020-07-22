@@ -11,9 +11,11 @@ import net.corda.core.contracts.Command;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
+import org.intellij.lang.annotations.Flow;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,20 +24,18 @@ import java.util.stream.Collectors;
 // ******************
 @InitiatingFlow
 @StartableByRPC
-public class CreateFlow extends FlowLogic<Void> {
+public class BidFlow extends FlowLogic<Void> {
     private final Integer auctionValue;
     private final String auctionName;
-    private final Instant auctiontimeWindow;
 
     /**
      * The progress tracker provides checkpoints indicating the progress of the flow to observers.
      */
     private final ProgressTracker progressTracker = new ProgressTracker();
 
-    public CreateFlow(Integer auctionValue, String auctionName, String auctionTime) {
+    public BidFlow(Integer auctionValue, String auctionName) {
         this.auctionValue = auctionValue;
         this.auctionName = auctionName;
-        this.auctiontimeWindow =  Instant.parse(auctionTime);
     }
 
     @Override
@@ -52,28 +52,27 @@ public class CreateFlow extends FlowLogic<Void> {
         // We retrieve the notary identity from the network map.
         Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
+        // We create the transaction components.
+
+        // Query the vault to fetch a list of all AuctionState state, and filter the results based on the auctionId
+        // to fetch the desired AuctionState state from the vault. This filtered state would be used as input to the
+        // transaction.
         List<StateAndRef<AuctionState>> auntionStateAndRefs = getServiceHub().getVaultService()
                 .queryBy(AuctionState.class).getStates();
 
-        Object[] inputStateAndRef = auntionStateAndRefs.stream().filter(auctionStateAndRef -> {
+        StateAndRef<AuctionState> inputStateAndRef = auntionStateAndRefs.stream().filter(auctionStateAndRef -> {
             AuctionState auctionState = auctionStateAndRef.getState().getData();
             return auctionState.getName().equals(auctionName);
-        }).toArray();
+        }).findAny().orElseThrow(() -> new IllegalArgumentException("Auction Not Found"));
 
-        if (inputStateAndRef.length != 0) {
-            throw new IllegalArgumentException("duplicate names");
-        }
+        AuctionState input = inputStateAndRef.getState().getData();
 
-        // We create the transaction components.
-        List<AbstractParty> parties = getServiceHub().getNetworkMapCache().getAllNodes().stream()
-                .map(nodeInfo -> nodeInfo.getLegalIdentities().get(0))
-                .collect(Collectors.toList());
-        parties.remove(notary);
-        AuctionState outputState = new AuctionState(parties, this.auctionName, this.auctionValue, this.auctiontimeWindow, getOurIdentity(), getOurIdentity());
-        Command command = new Command<>(new TemplateContract.Commands.Create(), getOurIdentity().getOwningKey());
+        AuctionState outputState = new AuctionState(input.getParticipants() , auctionName, auctionValue, input.getTimeWindow(), input.getAuctioneer(), getOurIdentity());
+        Command command = new Command<>(new TemplateContract.Commands.Bid(), getOurIdentity().getOwningKey());
 
         // We create a transaction builder and add the components.
         TransactionBuilder txBuilder = new TransactionBuilder(notary)
+                .addInputState(inputStateAndRef)
                 .addOutputState(outputState, TemplateContract.ID)
                 .addCommand(command);
 
@@ -82,16 +81,24 @@ public class CreateFlow extends FlowLogic<Void> {
 
         // Signing the transaction.
         SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
+
+
         // Creating a session with the other party.
-        List<FlowSession> bidderSessions = new ArrayList<>();
-        List<AbstractParty> send = new ArrayList<AbstractParty>(parties);
-        send.remove(getOurIdentity());
-        for(AbstractParty bidder: send) {
-            System.out.println(bidder);
-            bidderSessions.add(initiateFlow(bidder));
-        }
+
+        System.out.println("1");
         // We finalise the transaction and then send it to the counterparty.
-        subFlow(new FinalityFlow(signedTx, bidderSessions));
+        signedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singletonList(initiateFlow(input.getAuctioneer()))));
+        List<FlowSession> allSessions = new ArrayList<FlowSession>();
+        for (AbstractParty party: outputState.getParticipants()){
+            if(!party.equals(getOurIdentity())) {
+                FlowSession session = initiateFlow(party);
+                allSessions.add(session);
+            }
+        }
+
+        allSessions.remove(notary);
+        System.out.println("2");
+        subFlow(new FinalityFlow(signedTx, allSessions));
         return null;
     }
 }

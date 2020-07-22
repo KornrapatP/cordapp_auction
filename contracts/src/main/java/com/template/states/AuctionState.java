@@ -18,16 +18,22 @@ public class AuctionState implements ContractState {
     private final Integer value;
     private final Instant timeWindow;
     private final Party auctioneer;
-    public AuctionState(List<AbstractParty> participants, String name, Integer value, Instant timeWindow, Party auctioneer) {
+    private final Party currentBidder;
+    public AuctionState(List<AbstractParty> participants, String name, Integer value, Instant timeWindow, Party auctioneer, Party currentBidder) {
         this.participants = participants;
         this.name = name;
         this.value = value;
         this.timeWindow = timeWindow;
         this.auctioneer = auctioneer;
+        this.currentBidder = currentBidder;
     }
 
     public Party getAuctioneer() {
         return auctioneer;
+    }
+
+    public Party getCurrentBidder() {
+        return currentBidder;
     }
 
     public Integer getValue() {

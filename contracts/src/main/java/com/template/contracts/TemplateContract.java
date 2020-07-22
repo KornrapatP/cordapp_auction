@@ -37,6 +37,9 @@ public class TemplateContract implements Contract {
         if(tx.getOutputStates().size() != 1) throw new IllegalArgumentException("One Output Expected");
         Command command = tx.getCommand(0);
         AuctionState auctionState = (AuctionState) tx.getOutput(0);
+        if (!auctionState.getAuctioneer().equals(auctionState.getCurrentBidder())) {
+            throw new IllegalArgumentException("The auctioneer must initially be the highest bidder!");
+        }
         if(!TimeWindow.untilOnly(auctionState.getTimeWindow()).contains(Instant.now())) {
             throw new IllegalArgumentException("Auction is not Active");
         }
