@@ -1,0 +1,3 @@
+start CreateFlow auctionValue: 1001, auctionName: "test", auctionTime: "2022-10-01T08:25:24.00Z"
+run vaultQuery contractStateType: com.template.states.AuctionState
+start BidFlow auctionValue: 99, auctionName: "test"
