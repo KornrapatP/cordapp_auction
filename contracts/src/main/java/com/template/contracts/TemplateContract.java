@@ -101,7 +101,6 @@ public class TemplateContract implements Contract {
 
     // Used to indicate the transaction's intent.
     public interface Commands extends CommandData {
-        class Action implements Commands {}
         class Create implements Commands {}
         class Bid implements Commands {}
     }

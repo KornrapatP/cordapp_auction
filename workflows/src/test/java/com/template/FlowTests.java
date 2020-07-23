@@ -1,7 +1,6 @@
 package com.template;
 
 import com.google.common.collect.ImmutableList;
-import com.template.flows.Responder;
 import net.corda.testing.node.MockNetwork;
 import net.corda.testing.node.MockNetworkParameters;
 import net.corda.testing.node.StartedMockNode;
@@ -19,8 +18,6 @@ public class FlowTests {
     private final StartedMockNode b = network.createNode();
 
     public FlowTests() {
-        a.registerInitiatedFlow(Responder.class);
-        b.registerInitiatedFlow(Responder.class);
     }
 
     @Before
