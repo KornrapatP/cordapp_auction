@@ -89,16 +89,14 @@ public class BidFlow extends FlowLogic<Void> {
 
         // Creating a session with the other party.
 
-        System.out.println("1");
         // We finalise the transaction and then send it to the counterparty.
         FlowSession auctioneerSes = initiateFlow(input.getAuctioneer());
         auctioneerSes.send(true);
-        System.out.println(1);
         signedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singletonList(auctioneerSes)));
-        System.out.println(2);
+
         List<FlowSession> allSessions = new ArrayList<FlowSession>();
         allSessions.add(auctioneerSes);
-        System.out.println(3);
+
         for(AbstractParty party: outputState.getParticipants()){
             if(!party.equals(getOurIdentity())) {
                 FlowSession session = initiateFlow(party);
@@ -106,9 +104,9 @@ public class BidFlow extends FlowLogic<Void> {
                 allSessions.add(session);
             }
         }
-        System.out.println(4);
+
         allSessions.remove(notary);
-        System.out.println("2");
+
         subFlow(new FinalityFlow(signedTx, allSessions));
         return null;
     }
