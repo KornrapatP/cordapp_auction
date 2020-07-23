@@ -13,6 +13,7 @@ import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import org.intellij.lang.annotations.Flow;
 
+import java.security.PublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,7 +69,10 @@ public class BidFlow extends FlowLogic<Void> {
         AuctionState input = inputStateAndRef.getState().getData();
 
         AuctionState outputState = new AuctionState(input.getParticipants() , auctionName, auctionValue, input.getTimeWindow(), input.getAuctioneer(), getOurIdentity());
-        Command command = new Command<>(new TemplateContract.Commands.Bid(), getOurIdentity().getOwningKey());
+        List<PublicKey> signers = new ArrayList<PublicKey>();
+        signers.add(getOurIdentity().getOwningKey());
+        signers.add(input.getAuctioneer().getOwningKey());
+        Command command = new Command<>(new TemplateContract.Commands.Bid(), signers);
 
         // We create a transaction builder and add the components.
         TransactionBuilder txBuilder = new TransactionBuilder(notary)

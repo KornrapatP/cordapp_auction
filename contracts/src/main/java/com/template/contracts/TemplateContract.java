@@ -55,7 +55,48 @@ public class TemplateContract implements Contract {
     }
 
     private void verifyBid(LedgerTransaction tx) {
-
+        if(tx.getInputStates().size() != 1) throw new IllegalArgumentException("One Input Expected");
+        if(tx.getOutputStates().size() != 1) throw new IllegalArgumentException("One Output Expected");
+        Command command = tx.getCommand(0);
+        AuctionState outputState = (AuctionState) tx.getOutput(0);
+        AuctionState inputState = (AuctionState) tx.getInput(0);
+        //check id/ name
+        if (!outputState.getName().equals(inputState.getName())) {
+            System.out.println(1);
+            throw new IllegalArgumentException("The id/name don't match!");
+        }
+        if (!inputState.getAuctioneer().equals(outputState.getAuctioneer())) {
+            System.out.println(2);
+            throw new IllegalArgumentException("The auctioneer must be the same!");
+        }
+        if (inputState.getValue()<=outputState.getValue()) {
+            System.out.println(3);
+            throw new IllegalArgumentException("The new bid must be lower!");
+        }
+        if (!TimeWindow.untilOnly(inputState.getTimeWindow()).contains(Instant.now())) {
+            System.out.println(4);
+            throw new IllegalArgumentException("Auction is not Active");
+        }
+        if (!inputState.getTimeWindow().equals(outputState.getTimeWindow())) {
+            System.out.println(5);
+            throw new IllegalArgumentException("The time window must not change!");
+        }
+        if (!command.getSigners().contains(inputState.getAuctioneer().getOwningKey())) {
+            System.out.println(6);
+            throw new IllegalArgumentException("Auctioneer did not sign this transaction!");
+        }
+        if (!command.getSigners().contains(outputState.getCurrentBidder().getOwningKey())) {
+            System.out.println(7);
+            throw new IllegalArgumentException("Bidder did not sign this transaction!");
+        }
+        if (command.getSigners().size() != 2) {
+            System.out.println(8);
+            throw new IllegalArgumentException("There must be exactly 2 signers!");
+        }
+        if (outputState.getValue() < 0) {
+            System.out.println(9);
+            throw new IllegalArgumentException("Invalid bid value");
+        }
     }
 
     // Used to indicate the transaction's intent.
