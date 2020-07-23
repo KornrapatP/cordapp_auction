@@ -17,6 +17,7 @@ public class CreateFlowResponder extends FlowLogic<Void> {
     @Suspendable
     @Override
     public Void call() throws FlowException {
+        // Finalize the Flow and save new state
         subFlow(new ReceiveFinalityFlow(otherPartySession));
 
         return null;

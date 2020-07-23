@@ -55,7 +55,7 @@ public class BidFlow extends FlowLogic<Void> {
 
         // We create the transaction components.
 
-        // Query the vault to fetch a list of all AuctionState state, and filter the results based on the auctionId
+        // Query the vault to fetch a list of all AuctionState state, and filter the results based on the auctionName
         // to fetch the desired AuctionState state from the vault. This filtered state would be used as input to the
         // transaction.
         List<StateAndRef<AuctionState>> auntionStateAndRefs = getServiceHub().getVaultService()
@@ -68,10 +68,14 @@ public class BidFlow extends FlowLogic<Void> {
 
         AuctionState input = inputStateAndRef.getState().getData();
 
+        // Create outputState
         AuctionState outputState = new AuctionState(input.getParticipants() , auctionName, auctionValue, input.getTimeWindow(), input.getAuctioneer(), getOurIdentity());
+        // Put all signers PubicKey into a list
         List<PublicKey> signers = new ArrayList<PublicKey>();
         signers.add(getOurIdentity().getOwningKey());
         signers.add(input.getAuctioneer().getOwningKey());
+
+        // Create Command from CommandData Bid and list of required signers
         Command command = new Command<>(new TemplateContract.Commands.Bid(), signers);
 
         // We create a transaction builder and add the components.
@@ -83,17 +87,15 @@ public class BidFlow extends FlowLogic<Void> {
         // Verify transaction
         txBuilder.verify(getServiceHub());
 
-        // Signing the transaction.
+        // Self Signing the transaction.
         SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
-
-        // Creating a session with the other party.
-
-        // We finalise the transaction and then send it to the counterparty.
+        // Create a Session with the Auctioneer and initiate CollectSignaturesFlow
         FlowSession auctioneerSes = initiateFlow(input.getAuctioneer());
         auctioneerSes.send(true);
         signedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singletonList(auctioneerSes)));
 
+        // Initiate Sessions with all participants to Finalize flow
         List<FlowSession> allSessions = new ArrayList<FlowSession>();
         allSessions.add(auctioneerSes);
 

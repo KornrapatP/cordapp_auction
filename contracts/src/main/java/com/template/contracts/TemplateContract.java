@@ -33,7 +33,7 @@ public class TemplateContract implements Contract {
     }
 
     private void verifyCreate(LedgerTransaction tx) {
-        if(tx.getInputStates().size() != 0) throw new IllegalArgumentException("One Input Expected");
+        if(tx.getInputStates().size() != 0) throw new IllegalArgumentException("Zero Input Expected");
         if(tx.getOutputStates().size() != 1) throw new IllegalArgumentException("One Output Expected");
         Command command = tx.getCommand(0);
         AuctionState auctionState = (AuctionState) tx.getOutput(0);
