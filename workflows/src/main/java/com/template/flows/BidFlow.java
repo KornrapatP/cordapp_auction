@@ -91,15 +91,22 @@ public class BidFlow extends FlowLogic<Void> {
 
         System.out.println("1");
         // We finalise the transaction and then send it to the counterparty.
-        signedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singletonList(initiateFlow(input.getAuctioneer()))));
+        FlowSession auctioneerSes = initiateFlow(input.getAuctioneer());
+        auctioneerSes.send(true);
+        System.out.println(1);
+        signedTx = subFlow(new CollectSignaturesFlow(signedTx, Collections.singletonList(auctioneerSes)));
+        System.out.println(2);
         List<FlowSession> allSessions = new ArrayList<FlowSession>();
-        for (AbstractParty party: outputState.getParticipants()){
+        allSessions.add(auctioneerSes);
+        System.out.println(3);
+        for(AbstractParty party: outputState.getParticipants()){
             if(!party.equals(getOurIdentity())) {
                 FlowSession session = initiateFlow(party);
+                session.send(false);
                 allSessions.add(session);
             }
         }
-
+        System.out.println(4);
         allSessions.remove(notary);
         System.out.println("2");
         subFlow(new FinalityFlow(signedTx, allSessions));
