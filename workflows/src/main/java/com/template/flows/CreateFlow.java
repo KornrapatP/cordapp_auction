@@ -79,7 +79,9 @@ public class CreateFlow extends FlowLogic<Void> {
         parties.remove(notary);
 
         // Generate output state
-        AuctionState outputState = new AuctionState(parties, this.auctionName, this.auctionValue, this.auctiontimeWindow, getOurIdentity(), getOurIdentity());
+        ArrayList<AbstractParty> participants = new ArrayList<AbstractParty>();
+        participants.add(getOurIdentity());
+        AuctionState outputState = new AuctionState(parties, this.auctionName, this.auctionValue, this.auctiontimeWindow, getOurIdentity(), getOurIdentity(), participants);
 
         // Create command object with a CommandData and PublicKeys of the signers
         Command command = new Command<>(new TemplateContract.Commands.Create(), getOurIdentity().getOwningKey());

@@ -14,6 +14,8 @@ public class AuctionState implements ContractState {
     /** List of everyone allowed to participate */
     private final List<AbstractParty> participants;
 
+    private final List<AbstractParty> allowedBidders;
+
     /** Name of the auction used as identifier */
     private final String name;
 
@@ -38,18 +40,23 @@ public class AuctionState implements ContractState {
      * @param auctioneer
      * @param currentBidder
      */
-    public AuctionState(List<AbstractParty> participants, String name, Integer value, Instant timeWindow, Party auctioneer, Party currentBidder) {
+    public AuctionState(List<AbstractParty> participants, String name, Integer value, Instant timeWindow, Party auctioneer, Party currentBidder, List<AbstractParty> allowedBidders) {
         this.participants = participants;
         this.name = name;
         this.value = value;
         this.timeWindow = timeWindow;
         this.auctioneer = auctioneer;
         this.currentBidder = currentBidder;
+        this.allowedBidders = allowedBidders;
     }
 
     /** Auctioneer getter */
     public Party getAuctioneer() {
         return auctioneer;
+    }
+
+    public List<AbstractParty> getAllowedBidders() {
+        return allowedBidders;
     }
 
     /** CurrentBidder getter */

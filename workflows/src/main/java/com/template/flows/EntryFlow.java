@@ -25,8 +25,7 @@ import java.util.stream.Collectors;
 // ******************
 @InitiatingFlow
 @StartableByRPC
-public class BidFlow extends FlowLogic<Void> {
-    private final Integer auctionValue;
+public class EntryFlow extends FlowLogic<Void> {
     private final String auctionName;
 
     /**
@@ -34,8 +33,7 @@ public class BidFlow extends FlowLogic<Void> {
      */
     private final ProgressTracker progressTracker = new ProgressTracker();
 
-    public BidFlow(Integer auctionValue, String auctionName) {
-        this.auctionValue = auctionValue;
+    public EntryFlow(String auctionName) {
         this.auctionName = auctionName;
     }
 
@@ -60,24 +58,24 @@ public class BidFlow extends FlowLogic<Void> {
         // transaction.
         List<StateAndRef<AuctionState>> auntionStateAndRefs = getServiceHub().getVaultService()
                 .queryBy(AuctionState.class).getStates();
-
         StateAndRef<AuctionState> inputStateAndRef = auntionStateAndRefs.stream().filter(auctionStateAndRef -> {
             AuctionState auctionState = auctionStateAndRef.getState().getData();
             return auctionState.getName().equals(auctionName);
         }).findAny().orElseThrow(() -> new IllegalArgumentException("Auction Not Found"));
-
         AuctionState input = inputStateAndRef.getState().getData();
-
         // Create outputState
-        AuctionState outputState = new AuctionState(input.getParticipants() , auctionName, auctionValue, input.getTimeWindow(), input.getAuctioneer(), getOurIdentity(), input.getAllowedBidders());
+        List<AbstractParty> new_participants= new ArrayList<AbstractParty>(input.getAllowedBidders());
+        if (new_participants.contains(getOurIdentity())) {
+            throw new IllegalArgumentException("Participant already a valid bidder");
+        }
+        new_participants.add(getOurIdentity());
+        AuctionState outputState = new AuctionState(input.getParticipants() , auctionName, input.getValue(), input.getTimeWindow(), input.getAuctioneer(), getOurIdentity(), new_participants);
         // Put all signers PubicKey into a list
         List<PublicKey> signers = new ArrayList<PublicKey>();
         signers.add(getOurIdentity().getOwningKey());
         signers.add(input.getAuctioneer().getOwningKey());
-
         // Create Command from CommandData Bid and list of required signers
-        Command command = new Command<>(new TemplateContract.Commands.Bid(), signers);
-
+        Command command = new Command<>(new TemplateContract.Commands.Entry(), signers);
         // We create a transaction builder and add the components.
         TransactionBuilder txBuilder = new TransactionBuilder(notary)
                 .addInputState(inputStateAndRef)
