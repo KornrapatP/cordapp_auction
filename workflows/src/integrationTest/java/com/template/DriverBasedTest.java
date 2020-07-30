@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 public class DriverBasedTest {
     private final TestIdentity partyA = new TestIdentity(new CordaX500Name("PartyA", "", "GB"));
     private final TestIdentity partyB = new TestIdentity(new CordaX500Name("PartyB", "", "US"));
+    private final TestIdentity partyC = new TestIdentity(new CordaX500Name("PartyC", "", "TH"));
 
     @Test
     public void nodeTest() {
@@ -35,12 +36,14 @@ public class DriverBasedTest {
             // has completed startup. Then these are all resolved with getOrThrow which returns the NodeHandle list.
             List<CordaFuture<NodeHandle>> handleFutures = ImmutableList.of(
                     dsl.startNode(new NodeParameters().withProvidedName(partyA.getName())),
-                    dsl.startNode(new NodeParameters().withProvidedName(partyB.getName()))
+                    dsl.startNode(new NodeParameters().withProvidedName(partyB.getName())),
+                    dsl.startNode(new NodeParameters().withProvidedName(partyC.getName()))
             );
 
             try {
                 NodeHandle partyAHandle = handleFutures.get(0).get();
                 NodeHandle partyBHandle = handleFutures.get(1).get();
+                NodeHandle partyCHandle = handleFutures.get(2).get();
 
                 // This test will call via the RPC proxy to find a party of another node to verify that the nodes have
                 // started and can communicate. This is a very basic test, in practice tests would be starting flows,
@@ -48,17 +51,25 @@ public class DriverBasedTest {
                 // as intended.
                 assertEquals(partyAHandle.getRpc().wellKnownPartyFromX500Name(partyB.getName()).getName(), partyB.getName());
                 assertEquals(partyBHandle.getRpc().wellKnownPartyFromX500Name(partyA.getName()).getName(), partyA.getName());
+                assertEquals(partyAHandle.getRpc().wellKnownPartyFromX500Name(partyC.getName()).getName(), partyC.getName());
+                assertEquals(partyBHandle.getRpc().wellKnownPartyFromX500Name(partyC.getName()).getName(), partyC.getName());
+                assertEquals(partyCHandle.getRpc().wellKnownPartyFromX500Name(partyB.getName()).getName(), partyB.getName());
+                assertEquals(partyCHandle.getRpc().wellKnownPartyFromX500Name(partyA.getName()).getName(), partyA.getName());
 
                 // Start CreateFlow and VaultQuery for AuctionState in initiator(PartyB) vault
-                partyBHandle.getRpc().startFlowDynamic(CreateFlow.class, 100, "test", "2022-10-01T08:25:24.00Z").getReturnValue().get();
+                partyAHandle.getRpc().startFlowDynamic(CreateFlow.class, 100, "test", "2022-10-01T08:25:24.00Z").getReturnValue().get();
 
-                partyAHandle.getRpc().startFlowDynamic(EntryFlow.class, "test").getReturnValue().get();
-                partyAHandle.getRpc().startFlowDynamic(BidFlow.class, 99, "test").getReturnValue().get();
+                partyBHandle.getRpc().startFlowDynamic(EntryFlow.class, "test").getReturnValue().get();
+                partyBHandle.getRpc().startFlowDynamic(BidFlow.class, 99, "test").getReturnValue().get();
+
+                partyCHandle.getRpc().startFlowDynamic(EntryFlow.class, "test").getReturnValue().get();
+                partyCHandle.getRpc().startFlowDynamic(BidFlow.class, 50, "test").getReturnValue().get();
+
                 assertEquals(1, partyAHandle.getRpc().vaultQuery(AuctionState.class).getStates().size());
-                AuctionState output = partyAHandle.getRpc().vaultQuery(AuctionState.class).getStates().get(0).component1().getData();
+                AuctionState output = partyBHandle.getRpc().vaultQuery(AuctionState.class).getStates().get(0).component1().getData();
 
                 assertEquals("test", output.getName());
-                assertEquals(99, (int) output.getValue());
+                assertEquals(50, (int) output.getValue());
 
             } catch (Exception e) {
                 throw new RuntimeException("Caught exception during test", e);
