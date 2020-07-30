@@ -2,12 +2,15 @@ package com.template.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.flows.*;
+import net.corda.core.transactions.SignedTransaction;
+
+import javax.annotation.Signed;
 
 // ******************
 // * Responder flow *
 // ******************
 @InitiatedBy(CreateFlow.class)
-public class CreateFlowResponder extends FlowLogic<Void> {
+public class CreateFlowResponder extends FlowLogic<SignedTransaction> {
     private final FlowSession otherPartySession;
 
     public CreateFlowResponder(FlowSession otherPartySession) {
@@ -16,10 +19,8 @@ public class CreateFlowResponder extends FlowLogic<Void> {
 
     @Suspendable
     @Override
-    public Void call() throws FlowException {
+    public SignedTransaction call() throws FlowException {
         // Finalize the Flow and save new state
-        subFlow(new ReceiveFinalityFlow(otherPartySession));
-
-        return null;
+        return subFlow(new ReceiveFinalityFlow(otherPartySession));
     }
 }

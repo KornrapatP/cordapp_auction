@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 // * Responder flow *
 // ******************
 @InitiatedBy(EntryFlow.class)
-public class EntryFlowResponder extends FlowLogic<Void> {
+public class EntryFlowResponder extends FlowLogic<SignedTransaction> {
     private final FlowSession otherPartySession;
 
     public EntryFlowResponder(FlowSession otherPartySession) {
@@ -18,7 +18,7 @@ public class EntryFlowResponder extends FlowLogic<Void> {
 
     @Suspendable
     @Override
-    public Void call() throws FlowException {
+    public SignedTransaction call() throws FlowException {
         boolean flag = otherPartySession.receive(Boolean.class).unwrap(it -> it);
         // Flag to decide when CollectSignaturesFlow is called for this counterparty. SignTransactionFlow is
         // executed only if CollectSignaturesFlow is called from the initiator.
@@ -31,9 +31,9 @@ public class EntryFlowResponder extends FlowLogic<Void> {
                 }
             });
         }
-        subFlow(new ReceiveFinalityFlow(otherPartySession));
 
 
-        return null;
+
+        return subFlow(new ReceiveFinalityFlow(otherPartySession));
     }
 }

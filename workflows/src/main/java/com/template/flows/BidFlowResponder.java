@@ -3,13 +3,16 @@ package com.template.flows;
 import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.flows.*;
 import net.corda.core.transactions.SignedTransaction;
+import org.intellij.lang.annotations.Flow;
 import org.jetbrains.annotations.NotNull;
+
+import java.security.SignatureException;
 
 // ******************
 // * Responder flow *
 // ******************
 @InitiatedBy(BidFlow.class)
-public class BidFlowResponder extends FlowLogic<Void> {
+public class BidFlowResponder extends FlowLogic<SignedTransaction> {
     private final FlowSession otherPartySession;
 
     public BidFlowResponder(FlowSession otherPartySession) {
@@ -18,7 +21,7 @@ public class BidFlowResponder extends FlowLogic<Void> {
 
     @Suspendable
     @Override
-    public Void call() throws FlowException {
+    public SignedTransaction call() throws FlowException {
         boolean flag = otherPartySession.receive(Boolean.class).unwrap(it -> it);
         // Flag to decide when CollectSignaturesFlow is called for this counterparty. SignTransactionFlow is
         // executed only if CollectSignaturesFlow is called from the initiator.
@@ -31,9 +34,9 @@ public class BidFlowResponder extends FlowLogic<Void> {
                 }
             });
         }
-        subFlow(new ReceiveFinalityFlow(otherPartySession));
 
 
-        return null;
+
+        return subFlow(new ReceiveFinalityFlow(otherPartySession));
     }
 }

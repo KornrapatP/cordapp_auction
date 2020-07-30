@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 // ******************
 @InitiatingFlow
 @StartableByRPC
-public class EntryFlow extends FlowLogic<Void> {
+public class EntryFlow extends FlowLogic<SignedTransaction> {
     private final String auctionName;
 
     /**
@@ -47,7 +47,7 @@ public class EntryFlow extends FlowLogic<Void> {
      */
     @Suspendable
     @Override
-    public Void call() throws FlowException {
+    public SignedTransaction call() throws FlowException {
         // We retrieve the notary identity from the network map.
         Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
@@ -110,7 +110,7 @@ public class EntryFlow extends FlowLogic<Void> {
             }
         }
 
-        subFlow(new FinalityFlow(signedTx, allSessions));
-        return null;
+
+        return subFlow(new FinalityFlow(signedTx, allSessions));
     }
 }
